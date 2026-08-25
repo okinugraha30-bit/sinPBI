@@ -1,1 +1,394 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Akademik PBBI - Oki Nugraha, S.Pd., M.I.Kom.</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 font-sans antialiased">
+    <div class="max-w-6xl mx-auto p-2 md:p-6">
+        <!-- Header Profil -->
+        <div class="bg-white rounded-2xl shadow-sm p-4 md:p-6 mb-6 border-l-4 border-indigo-600 flex flex-col md:flex-row justify-between items-start md:items-center">
+            <div>
+                <h1 class="text-xl md:text-2xl font-bold text-slate-800">Sistem Manajemen Nilai & Poin Keaktifan</h1>
+                <p class="text-indigo-600 font-medium text-sm">Mata Pelajaran Bahasa Prancis (PBBI)</p>
+                <p class="text-xs text-slate-500 mt-1">Guru Pengampu: <span class="font-semibold text-slate-700">Oki Nugraha, S.Pd., M.I.Kom.</span></p>
+            </div>
+            <div class="mt-4 md:mt-0 bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-xl text-xs font-semibold">
+                SMP Taruna Bakti • T.A. 2026/2027
+            </div>
+        </div>
 
+        <!-- Panel Autentikasi / Token -->
+        <div id="authBox" class="bg-amber-50 border border-amber-200 rounded-2xl p-4 md:p-6 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+                <h3 class="font-bold text-amber-800 text-sm">Akses Terproteksi</h3>
+                <p class="text-xs text-amber-600">Masukkan token/password guru untuk membuka lembar kerja.</p>
+            </div>
+            <div class="flex items-center space-x-2 w-full md:w-auto">
+                <input type="password" id="tokenInput" placeholder="Masukkan Token" class="bg-white border border-amber-300 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-500 w-full md:w-48">
+                <button id="btnLogin" onclick="verifikasiToken()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-xs font-semibold transition whitespace-nowrap">
+                    Buka Akses
+                </button>
+            </div>
+        </div>
+
+        <!-- Panel Kontrol -->
+        <div id="mainPanel" class="hidden">
+            <div class="bg-white rounded-2xl shadow-sm p-4 md:p-6 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Pilih Kelas</label>
+                    <select id="kelasSelect" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <option value="VII-A">Kelas VII-A</option>
+                        <option value="VII-B">Kelas VII-B</option>
+                        <option value="VII-C">Kelas VII-C</option>
+                        <option value="VII-D">Kelas VII-D</option>
+                        <option value="VII-E">Kelas VII-E</option>
+                        <option value="VII-F">Kelas VII-F</option>
+                        <option value="VII-G">Kelas VII-G</option>
+                        <option value="VII-BILINGUAL-1">Kelas VII Bilingual-1</option>
+                        <option value="VII-BILINGUAL-2">Kelas VII Bilingual-2</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Mode Lembar Kerja</label>
+                    <select id="modeSelect" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <option value="nilai">Input Nilai Tugas / Ulangan</option>
+                        <option value="poin" selected>Manajemen Poin Keaktifan & Penukaran</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button onclick="loadDataSiswa()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold p-3 rounded-xl transition shadow-lg shadow-indigo-100">
+                        Muat Lembar Kerja
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabel Data & Input -->
+            <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-100">
+                <div id="tableHeaderInfo" class="p-4 bg-slate-50 border-b font-semibold text-slate-700 flex justify-between items-center text-sm">
+                    <span>Daftar Siswa</span>
+                    <span id="statusIndicator" class="text-xs text-slate-400">Silakan muat lembar kerja</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50/50 text-slate-500 text-xs uppercase tracking-wider border-b">
+                                <th class="p-4">No</th>
+                                <th class="p-4">No. Induk</th>
+                                <th class="p-4">NAMA SISWA</th>
+                                <th class="p-4" id="kolomInputHeader">AKUMULASI POIN KEAKTIFAN & PENUKARAN KE KOLOM NILAI</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelSiswaBody" class="divide-y divide-slate-100 text-sm">
+                            <tr>
+                                <td colspan="4" class="p-8 text-center text-slate-400">Pilih kelas dan mode, lalu klik "Muat Lembar Kerja".</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwGEv5H7s3k02x8PM2Vgi-AkObFdLlySmPE4S1beH7GEapbgKNCKzLiGVazpHnfXwCi/exec";
+
+        let globalData = null;
+        let userToken = "";
+
+        async function verifikasiToken() {
+            const tokenVal = document.getElementById('tokenInput').value;
+            const btn = document.getElementById('btnLogin');
+
+            if(!tokenVal) {
+                alert("Mohon masukkan token terlebih dahulu!");
+                return;
+            }
+
+            btn.innerText = "Memeriksa...";
+            btn.disabled = true;
+
+            try {
+                let response = await fetch(`${WEB_APP_URL}?action=getData&kelas=VII-A&token=${encodeURIComponent(tokenVal)}`);
+                let resJson = await response.json();
+
+                if(resJson.status === "error") {
+                    alert("Akses Ditolak: " + resJson.message);
+                    btn.innerText = "Buka Akses";
+                    btn.disabled = false;
+                } else {
+                    userToken = tokenVal;
+                    document.getElementById('authBox').classList.add('hidden');
+                    document.getElementById('mainPanel').classList.remove('hidden');
+                    loadDataSiswa();
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Gagal terhubung ke server Apps Script.");
+                btn.innerText = "Buka Akses";
+                btn.disabled = false;
+            }
+        }
+
+        async function loadDataSiswa() {
+            const kelas = document.getElementById('kelasSelect').value;
+            const tbody = document.getElementById('tabelSiswaBody');
+            const statusInd = document.getElementById('statusIndicator');
+            
+            tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-indigo-600 font-medium">Memuat data dari Google Sheets...</td></tr>`;
+            statusInd.innerText = "Memuat...";
+
+            try {
+                let response = await fetch(`${WEB_APP_URL}?action=getData&kelas=${encodeURIComponent(kelas)}&token=${encodeURIComponent(userToken)}`);
+                let resJson = await response.json();
+
+                if(resJson.status === "error") {
+                    alert("Error: " + resJson.message);
+                    tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-red-500">Gagal memuat data.</td></tr>`;
+                    return;
+                }
+
+                globalData = resJson;
+                renderTable();
+                statusInd.innerText = `Berhasil dimuat (${globalData.siswa.length} Siswa)`;
+
+            } catch (error) {
+                console.error(error);
+                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-red-500">Terjadi kesalahan koneksi jaringan.</td></tr>`;
+                statusInd.innerText = "Gagal terhubung";
+            }
+        }
+
+        function getFilteredHeaders() {
+            return globalData.headerNilai.filter(h => {
+                if (!h) return false;
+                let hStr = String(h).trim();
+                let upperH = hStr.toUpperCase();
+                if (upperH.includes("NO") || upperH.includes("INDUK") || upperH.includes("NAMA") || 
+                    upperH.includes("L/P") || upperH.includes("POIN") || upperH.includes("SALDO") || 
+                    upperH.includes("REMEDIAL") || upperH.includes("RNH") || upperH.includes("SKE") || 
+                    upperH.includes("NAEP") || upperH.includes("NPG") || upperH.includes("SPG") || 
+                    upperH.includes("UNNAMED") || !isNaN(hStr)) {
+                    return false;
+                }
+                return true;
+            });
+        }
+
+        function renderTable() {
+            const mode = document.getElementById('modeSelect').value;
+            const tbody = document.getElementById('tabelSiswaBody');
+            const thHeader = document.getElementById('kolomInputHeader');
+            
+            tbody.innerHTML = "";
+            let filteredHeaders = getFilteredHeaders();
+
+            if (mode === 'nilai') {
+                thHeader.innerHTML = `
+                    <div class="flex items-center space-x-2">
+                        <span>Pilih Kolom Tugas:</span>
+                        <select id="kolomPilihan" class="bg-white border border-slate-300 rounded-lg p-1.5 text-xs font-normal outline-none focus:ring-2 focus:ring-indigo-500">
+                            ${filteredHeaders.map(h => `<option value="${h}">${h}</option>`).join('')}
+                        </select>
+                    </div>
+                `;
+
+                globalData.siswa.forEach((siswa) => {
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-50/85 transition">
+                            <td class="p-4 text-slate-500">${siswa.no}</td>
+                            <td class="p-4 text-slate-600 font-mono text-xs">${siswa.induk}</td>
+                            <td class="p-4 font-semibold text-slate-800">${siswa.nama}</td>
+                            <td class="p-4">
+                                <div class="flex items-center space-x-2">
+                                    <input type="text" id="input_${siswa.induk}" placeholder="Nilai" 
+                                        class="border border-slate-200 rounded-xl px-3 py-2 w-32 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50/50 focus:bg-white">
+                                    <button onclick="simpanNilaiTugas('${siswa.induk}')" class="bg-slate-800 hover:bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-medium transition shadow-sm">
+                                        Simpan
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+            } else {
+                thHeader.innerHTML = `<span class="text-xs text-slate-500">AKUMULASI POIN KEAKTIFAN & PENUKARAN KE KOLOM NILAI</span>`;
+
+                globalData.siswa.forEach((siswa) => {
+                    let defaultCol = filteredHeaders[0];
+                    let initialExistingVal = (siswa.nilaiMap && siswa.nilaiMap[defaultCol] !== undefined) ? siswa.nilaiMap[defaultCol] : 0;
+
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-50/85 transition">
+                            <td class="p-4 text-slate-500">${siswa.no}</td>
+                            <td class="p-4 text-slate-600 font-mono text-xs">${siswa.induk}</td>
+                            <td class="p-4 font-semibold text-slate-800">
+                                ${siswa.nama}
+                                <div class="text-xs text-indigo-600 font-normal mt-0.5">Saldo Poin Aktif: <strong class="text-indigo-700">${siswa.saldo}</strong></div>
+                            </td>
+                            <td class="p-4">
+                                <div class="flex flex-col xl:flex-row gap-3 items-start xl:items-center">
+                                    <div class="flex items-center space-x-1 bg-slate-50 p-1.5 rounded-xl border border-slate-200">
+                                        <span class="text-xs text-slate-500 font-medium">Total POIN:</span>
+                                        <input type="number" id="poin_${siswa.induk}" value="${siswa.poin}" 
+                                            class="border border-slate-200 rounded-lg px-2 py-1 w-16 text-xs bg-white outline-none">
+                                        <button onclick="simpanPoinLangsung('${siswa.induk}', 'POIN', 'poin_${siswa.induk}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-1 rounded-lg text-xs font-medium transition">
+                                            Update
+                                        </button>
+                                    </div>
+
+                                    <div class="flex items-center space-x-1.5 bg-amber-50/60 p-1.5 rounded-xl border border-amber-200">
+                                        <span class="text-xs text-amber-800 font-medium">Tukar:</span>
+                                        <input type="number" id="jmlTukar_${siswa.induk}" placeholder="Jml" min="1" max="${siswa.saldo}"
+                                            class="border border-amber-300 rounded-lg px-2 py-1 w-14 text-xs bg-white outline-none">
+                                        <span class="text-xs text-slate-500">ke</span>
+                                        <select id="targetKolomNilai_${siswa.induk}" onchange="updateExistingValue('${siswa.induk}')" class="border border-amber-300 rounded-lg p-1 text-xs bg-white outline-none">
+                                            ${filteredHeaders.map(h => `<option value="${h}">${h}</option>`).join('')}
+                                        </select>
+                                        
+                                        <div class="bg-white px-2 py-1 rounded-lg border border-amber-200 text-xs whitespace-nowrap">
+                                            <span class="text-slate-400 text-[10px] block leading-none">Existing:</span>
+                                            <span id="existingVal_${siswa.induk}" class="font-bold text-amber-700">${initialExistingVal}</span>
+                                        </div>
+
+                                        <button onclick="tukarPoinKeNilai('${siswa.induk}')" class="bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-medium transition shadow-sm whitespace-nowrap">
+                                            Tukar
+                                        </button>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        }
+
+        function updateExistingValue(nis) {
+            const selectEl = document.getElementById(`targetKolomNilai_${nis}`);
+            const selectedCol = selectEl.value;
+            const existingDisplay = document.getElementById(`existingVal_${nis}`);
+
+            const siswaObj = globalData.siswa.find(s => String(s.induk) === String(nis));
+            if (siswaObj && siswaObj.nilaiMap) {
+                let val = siswaObj.nilaiMap[selectedCol] !== undefined ? siswaObj.nilaiMap[selectedCol] : 0;
+                existingDisplay.innerText = val;
+            } else {
+                existingDisplay.innerText = 0;
+            }
+        }
+
+        async function simpanNilaiTugas(nis) {
+            const kelas = document.getElementById('kelasSelect').value;
+            const kolomPilihan = document.getElementById('kolomPilihan').value;
+            const nilaiInput = document.getElementById(`input_${nis}`).value;
+
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = "...";
+            btn.disabled = true;
+
+            try {
+                let response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ token: userToken, kelas: kelas, nis: nis, tipe: 'nilai', kolom: kolomPilihan, nilai: nilaiInput })
+                });
+                let result = await response.json();
+                if(result.status === "success") {
+                    btn.innerText = "✓";
+                    btn.classList.add('bg-emerald-600');
+                    setTimeout(() => { btn.innerText = originalText; btn.classList.remove('bg-emerald-600'); btn.disabled = false; }, 2000);
+                } else {
+                    alert("Gagal: " + result.message);
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                alert("Kesalahan jaringan.");
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function simpanPoinLangsung(nis, targetKolom, inputId) {
+            const kelas = document.getElementById('kelasSelect').value;
+            const nilaiInput = document.getElementById(inputId).value;
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = "...";
+            btn.disabled = true;
+
+            try {
+                let response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ token: userToken, kelas: kelas, nis: nis, tipe: 'poin', kolom: targetKolom, nilai: nilaiInput })
+                });
+                let result = await response.json();
+                if(result.status === "success") {
+                    btn.innerText = "✓";
+                    setTimeout(() => { loadDataSiswa(); }, 1000);
+                } else {
+                    alert("Gagal: " + result.message);
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                alert("Kesalahan jaringan.");
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function tukarPoinKeNilai(nis) {
+            const kelas = document.getElementById('kelasSelect').value;
+            const jumlahPoin = document.getElementById(`jmlTukar_${nis}`).value;
+            const kolomNilaiTarget = document.getElementById(`targetKolomNilai_${nis}`).value;
+
+            if(!jumlahPoin || jumlahPoin <= 0) {
+                alert("Masukkan jumlah poin yang valid untuk ditukar!");
+                return;
+            }
+
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = "...";
+            btn.disabled = true;
+
+            try {
+                let payload = {
+                    token: userToken,
+                    kelas: kelas,
+                    nis: nis,
+                    tipe: 'tukar_poin_nilai',
+                    jumlahPoin: jumlahPoin,
+                    kolomNilai: kolomNilaiTarget
+                };
+
+                let response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+
+                let result = await response.json();
+                if(result.status === "success") {
+                    btn.innerText = "✓";
+                    setTimeout(() => {
+                        loadDataSiswa();
+                    }, 1200);
+                } else {
+                    alert("Gagal menukar poin: " + result.message);
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Terjadi kesalahan koneksi.");
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
